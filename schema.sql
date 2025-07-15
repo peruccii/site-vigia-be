@@ -21,5 +21,11 @@ CREATE TABLE websites (
 );
 
 CREATE TABLE uptime_checks (
-    id BIGSERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
+    website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_up BOOLEAN NOT NULL,
+    response_time_ms INT NOT NULL,
+    status_code INT NOT NULL,
+    error_message TEXT NULL
 );
