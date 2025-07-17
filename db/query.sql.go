@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -49,4 +50,26 @@ func (q *Queries) GetUserByID(ctx context.Context, id uuid.UUID) (User, error) {
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const registerUser = `-- name: RegisterUser :exec
+INSERT INTO users (name, email, password_hash, email_verified_at)
+VALUES ($1, $2, $3, $4)
+`
+
+type RegisterUserParams struct {
+	Name            string
+	Email           string
+	PasswordHash    string
+	EmailVerifiedAt sql.NullTime
+}
+
+func (q *Queries) RegisterUser(ctx context.Context, arg RegisterUserParams) error {
+	_, err := q.db.ExecContext(ctx, registerUser,
+		arg.Name,
+		arg.Email,
+		arg.PasswordHash,
+		arg.EmailVerifiedAt,
+	)
+	return err
 }
