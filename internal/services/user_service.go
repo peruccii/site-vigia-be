@@ -48,7 +48,7 @@ func (s *userService) RegisterUser(ctx context.Context, input dto.RegisterUserRe
 		return fmt.Errorf("failed to check existing user: %w", err)
 	}
 
-	if err == nil && exitingUser.Email != "`" {
+	if err == nil && exitingUser.Email != "" {
 		return ErrUserAlreadyExists
 	}
 

@@ -12,6 +12,55 @@ import (
 	"github.com/google/uuid"
 )
 
+const createPlan = `-- name: CreatePlan :exec
+INSERT INTO plans (name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page )
+VALUES ($1, $2, $3, $4, $5, $6, $7)
+`
+
+type CreatePlanParams struct {
+	Name                  string
+	PriceMonthly          string
+	MaxWebsites           int32
+	CheckIntervalSeconds  int32
+	HasPerformanceReports bool
+	HasSeoAudits          bool
+	HasPublicStatusPage   bool
+}
+
+func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) error {
+	_, err := q.db.ExecContext(ctx, createPlan,
+		arg.Name,
+		arg.PriceMonthly,
+		arg.MaxWebsites,
+		arg.CheckIntervalSeconds,
+		arg.HasPerformanceReports,
+		arg.HasSeoAudits,
+		arg.HasPublicStatusPage,
+	)
+	return err
+}
+
+const getPlanByName = `-- name: GetPlanByName :one
+SELECT id, name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page FROM plans 
+WHERE name = $1
+`
+
+func (q *Queries) GetPlanByName(ctx context.Context, name string) (Plan, error) {
+	row := q.db.QueryRowContext(ctx, getPlanByName, name)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceMonthly,
+		&i.MaxWebsites,
+		&i.CheckIntervalSeconds,
+		&i.HasPerformanceReports,
+		&i.HasSeoAudits,
+		&i.HasPublicStatusPage,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, name, email, password_hash, email_verified_at, created_at, updated_at FROM users
 WHERE email = $1
