@@ -40,6 +40,30 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) error {
 	return err
 }
 
+const createSubscription = `-- name: CreateSubscription :exec
+INSERT INTO subscriptions (user_id ,plan_id, status, stripe_subscription_id, current_period_ends_at )
+VALUES ($1 , $2, $3, $4, $5)
+`
+
+type CreateSubscriptionParams struct {
+	UserID               uuid.UUID
+	PlanID               int32
+	Status               string
+	StripeSubscriptionID sql.NullString
+	CurrentPeriodEndsAt  sql.NullTime
+}
+
+func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error {
+	_, err := q.db.ExecContext(ctx, createSubscription,
+		arg.UserID,
+		arg.PlanID,
+		arg.Status,
+		arg.StripeSubscriptionID,
+		arg.CurrentPeriodEndsAt,
+	)
+	return err
+}
+
 const getPlanByName = `-- name: GetPlanByName :one
 SELECT id, name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page FROM plans 
 WHERE name = $1
