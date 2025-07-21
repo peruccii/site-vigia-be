@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"database/sql"
 
 	"peruccii/site-vigia-be/db"
 )
@@ -11,9 +10,9 @@ type PlanRepository struct {
 	queries *db.Queries
 }
 
-func NewPlanRepository(dbConn *sql.DB) *PlanRepository {
+func NewPlanRepository(queries *db.Queries) *PlanRepository {
 	return &PlanRepository{
-		queries: db.New(dbConn),
+		queries: queries,
 	}
 }
 

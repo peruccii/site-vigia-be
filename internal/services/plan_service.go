@@ -19,7 +19,7 @@ type planService struct {
 }
 
 type PlanService interface {
-	RegisterUser(ctx context.Context, input dto.CreatePlanRequest) error
+	CreatePlan(ctx context.Context, input dto.CreatePlanRequest) error
 }
 
 func NewPlanService(repo *repository.PlanRepository) *planService {

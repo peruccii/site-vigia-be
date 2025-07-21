@@ -85,6 +85,27 @@ func (q *Queries) GetPlanByName(ctx context.Context, name string) (Plan, error) 
 	return i, err
 }
 
+const getSubscriptionByStripeSbId = `-- name: GetSubscriptionByStripeSbId :one
+SELECT id, user_id, plan_id, status, stripe_subscription_id, current_period_ends_at, created_at, updated_at FROM subscriptions 
+WHERE stripe_subscription_id = $1
+`
+
+func (q *Queries) GetSubscriptionByStripeSbId(ctx context.Context, stripeSubscriptionID sql.NullString) (Subscription, error) {
+	row := q.db.QueryRowContext(ctx, getSubscriptionByStripeSbId, stripeSubscriptionID)
+	var i Subscription
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.PlanID,
+		&i.Status,
+		&i.StripeSubscriptionID,
+		&i.CurrentPeriodEndsAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getUser = `-- name: GetUser :one
 SELECT id, name, email, password_hash, email_verified_at, created_at, updated_at FROM users
 WHERE email = $1
@@ -145,4 +166,29 @@ func (q *Queries) RegisterUser(ctx context.Context, arg RegisterUserParams) erro
 		arg.EmailVerifiedAt,
 	)
 	return err
+}
+
+const signInUser = `-- name: SignInUser :one
+SELECT id, name, email, password_hash, email_verified_at, created_at, updated_at FROM users
+WHERE email = $1 AND password_hash = $2
+`
+
+type SignInUserParams struct {
+	Email        string
+	PasswordHash string
+}
+
+func (q *Queries) SignInUser(ctx context.Context, arg SignInUserParams) (User, error) {
+	row := q.db.QueryRowContext(ctx, signInUser, arg.Email, arg.PasswordHash)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Email,
+		&i.PasswordHash,
+		&i.EmailVerifiedAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
 }
