@@ -5,6 +5,8 @@ import (
 	"database/sql"
 
 	"peruccii/site-vigia-be/db"
+
+	"github.com/google/uuid"
 )
 
 type SubscriptionRepository struct {
@@ -21,6 +23,6 @@ func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, input d
 	return r.queries.CreateSubscription(ctx, input)
 }
 
-func (r *SubscriptionRepository) GetSubscriptionByStripeSbId(ctx context.Context, subscription_stripe_id sql.NullString) (db.Subscription, error) {
+func (r *SubscriptionRepository) GetSubscriptionByStripeSbId(ctx context.Context, subscription_stripe_id uuid.UUID) (db.Subscription, error) {
 	return r.queries.GetSubscriptionByStripeSbId(ctx, subscription_stripe_id)
 }

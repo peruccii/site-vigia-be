@@ -13,81 +13,81 @@ import (
 )
 
 type Incident struct {
-	ID              uuid.UUID
-	WebsiteID       uuid.UUID
-	StartedAt       time.Time
-	EndedAt         sql.NullTime
-	DurationSeconds sql.NullInt32
-	Cause           string
+	ID              uuid.UUID     `db:"id" json:"id"`
+	WebsiteID       uuid.UUID     `db:"website_id" json:"website_id"`
+	StartedAt       time.Time     `db:"started_at" json:"started_at"`
+	EndedAt         *time.Time    `db:"ended_at" json:"ended_at"`
+	DurationSeconds sql.NullInt32 `db:"duration_seconds" json:"duration_seconds"`
+	Cause           string        `db:"cause" json:"cause"`
 }
 
 type PerformanceReport struct {
-	ID             int64
-	WebsiteID      uuid.UUID
-	CheckedAt      time.Time
-	TtfbMs         sql.NullInt32
-	LcpMs          sql.NullInt32
-	FullLoadTimeMs sql.NullInt32
-	PageSizeKb     sql.NullInt32
+	ID             int64         `db:"id" json:"id"`
+	WebsiteID      uuid.UUID     `db:"website_id" json:"website_id"`
+	CheckedAt      time.Time     `db:"checked_at" json:"checked_at"`
+	TtfbMs         sql.NullInt32 `db:"ttfb_ms" json:"ttfb_ms"`
+	LcpMs          sql.NullInt32 `db:"lcp_ms" json:"lcp_ms"`
+	FullLoadTimeMs sql.NullInt32 `db:"full_load_time_ms" json:"full_load_time_ms"`
+	PageSizeKb     sql.NullInt32 `db:"page_size_kb" json:"page_size_kb"`
 }
 
 type Plan struct {
-	ID                    int32
-	Name                  string
-	PriceMonthly          string
-	MaxWebsites           int32
-	CheckIntervalSeconds  int32
-	HasPerformanceReports bool
-	HasSeoAudits          bool
-	HasPublicStatusPage   bool
+	ID                    int32  `db:"id" json:"id"`
+	Name                  string `db:"name" json:"name"`
+	PriceMonthly          string `db:"price_monthly" json:"price_monthly"`
+	MaxWebsites           int32  `db:"max_websites" json:"max_websites"`
+	CheckIntervalSeconds  int32  `db:"check_interval_seconds" json:"check_interval_seconds"`
+	HasPerformanceReports bool   `db:"has_performance_reports" json:"has_performance_reports"`
+	HasSeoAudits          bool   `db:"has_seo_audits" json:"has_seo_audits"`
+	HasPublicStatusPage   bool   `db:"has_public_status_page" json:"has_public_status_page"`
 }
 
 type SeoAudit struct {
-	ID        int64
-	WebsiteID uuid.UUID
-	AuditedAt time.Time
-	Results   json.RawMessage
+	ID        int64           `db:"id" json:"id"`
+	WebsiteID uuid.UUID       `db:"website_id" json:"website_id"`
+	AuditedAt time.Time       `db:"audited_at" json:"audited_at"`
+	Results   json.RawMessage `db:"results" json:"results"`
 }
 
 type Subscription struct {
-	ID                   uuid.UUID
-	UserID               uuid.UUID
-	PlanID               int32
-	Status               string
-	StripeSubscriptionID sql.NullString
-	CurrentPeriodEndsAt  sql.NullTime
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                   uuid.UUID      `db:"id" json:"id"`
+	UserID               uuid.UUID      `db:"user_id" json:"user_id"`
+	PlanID               int32          `db:"plan_id" json:"plan_id"`
+	Status               string         `db:"status" json:"status"`
+	StripeSubscriptionID sql.NullString `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+	CurrentPeriodEndsAt  *time.Time     `db:"current_period_ends_at" json:"current_period_ends_at"`
+	CreatedAt            time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt            time.Time      `db:"updated_at" json:"updated_at"`
 }
 
 type UptimeCheck struct {
-	ID             int32
-	WebsiteID      uuid.UUID
-	CheckedAt      time.Time
-	IsUp           bool
-	ResponseTimeMs int32
-	StatusCode     int32
-	ErrorMessage   sql.NullString
+	ID             int32     `db:"id" json:"id"`
+	WebsiteID      uuid.UUID `db:"website_id" json:"website_id"`
+	CheckedAt      time.Time `db:"checked_at" json:"checked_at"`
+	IsUp           bool      `db:"is_up" json:"is_up"`
+	ResponseTimeMs int32     `db:"response_time_ms" json:"response_time_ms"`
+	StatusCode     int32     `db:"status_code" json:"status_code"`
+	ErrorMessage   *string   `db:"error_message" json:"error_message"`
 }
 
 type User struct {
-	ID              uuid.UUID
-	Name            string
-	Email           string
-	PasswordHash    string
-	EmailVerifiedAt sql.NullTime
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID              uuid.UUID  `db:"id" json:"id"`
+	Name            string     `db:"name" json:"name"`
+	Email           string     `db:"email" json:"email"`
+	PasswordHash    string     `db:"password_hash" json:"password_hash"`
+	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at"`
+	CreatedAt       time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt       time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 type Website struct {
-	ID                   uuid.UUID
-	UserID               uuid.UUID
-	Name                 string
-	Url                  string
-	IsActive             bool
-	CheckIntervalSeconds int32
-	LastCheckedAt        sql.NullTime
-	CreatedAt            time.Time
-	UpdatedAt            time.Time
+	ID                   uuid.UUID  `db:"id" json:"id"`
+	UserID               uuid.UUID  `db:"user_id" json:"user_id"`
+	Name                 string     `db:"name" json:"name"`
+	Url                  string     `db:"url" json:"url"`
+	IsActive             bool       `db:"is_active" json:"is_active"`
+	CheckIntervalSeconds int32      `db:"check_interval_seconds" json:"check_interval_seconds"`
+	LastCheckedAt        *time.Time `db:"last_checked_at" json:"last_checked_at"`
+	CreatedAt            time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt            time.Time  `db:"updated_at" json:"updated_at"`
 }

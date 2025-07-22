@@ -30,7 +30,7 @@ func (s *subscriptionService) CreateSubscription(ctx context.Context, input dto.
 		return fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 
-	existingSubscription, err := s.repo.GetSubscriptionByStripeSbId(ctx, input.Email)
+	existingSubscription, err := s.repo.GetSubscriptionByStripeSbId(ctx, input.StripeSubscriptionID)
 	if err != nil && err != sql.ErrNoRows {
 		return fmt.Errorf("failed to check existing subscription: %w", err)
 	}

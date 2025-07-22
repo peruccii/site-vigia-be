@@ -47,7 +47,7 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 
 		users := protected.Group("/users").Use(middleware.AuthMiddleware(authService))
 		{
-			//	 users.GET("", userController.)
+			users.GET("/:email", userController.FindByEmail)
 		}
 
 		subscriptions := protected.Group("/subscriptions").Use(middleware.AuthMiddleware(authService))
@@ -58,4 +58,3 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 
 	return r
 }
-

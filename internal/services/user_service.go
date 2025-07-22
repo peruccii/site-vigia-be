@@ -22,6 +22,7 @@ type userService struct {
 
 type UserService interface {
 	RegisterUser(ctx context.Context, input dto.RegisterUserRequest) error
+	FindByEmail(ctx context.Context, email string) (db.User, error)
 }
 
 func NewUserService(repo *repository.UserRepository) *userService {
@@ -69,6 +70,10 @@ func (s *userService) RegisterUser(ctx context.Context, input dto.RegisterUserRe
 	}
 
 	return nil
+}
+
+func (s *userService) FindByEmail(ctx context.Context, email string) (db.User, error) {
+	return s.repo.GetUserByEmail(ctx, email)
 }
 
 func hashPassword(password string) (string, error) {

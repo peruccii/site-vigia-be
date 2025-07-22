@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"peruccii/site-vigia-be/db"
 	"peruccii/site-vigia-be/internal/dto"
 	"peruccii/site-vigia-be/internal/services"
 
@@ -11,6 +12,7 @@ import (
 
 type UserController interface {
 	Register(c *gin.Context)
+	FindByEmail(c *gin.Context)
 }
 
 type userController struct {
@@ -37,7 +39,31 @@ func (ctrl *userController) Register(c *gin.Context) {
 }
 
 func (ctrl *userController) FindByEmail(c *gin.Context) {
-    email := c.Param("email")
+	email := c.Param("email")
 
-    user, err := ctrl.service.
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email is required"})
+		return
+	}
+	user, err := ctrl.service.FindByEmail(c, email)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if user == (db.User{}) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+
+	response := dto.UserResponse{
+		ID:              user.ID.String(),
+		Name:            user.Name,
+		Email:           user.Email,
+		EmailVerifiedAt: user.EmailVerifiedAt.String(),
+		CreatedAt:       user.CreatedAt.Local().String(),
+		UpdatedAt:       user.UpdatedAt.Local().String(),
+	}
+
+	c.JSON(http.StatusOK, response)
 }

@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -18,13 +19,13 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 `
 
 type CreatePlanParams struct {
-	Name                  string
-	PriceMonthly          string
-	MaxWebsites           int32
-	CheckIntervalSeconds  int32
-	HasPerformanceReports bool
-	HasSeoAudits          bool
-	HasPublicStatusPage   bool
+	Name                  string `db:"name" json:"name"`
+	PriceMonthly          string `db:"price_monthly" json:"price_monthly"`
+	MaxWebsites           int32  `db:"max_websites" json:"max_websites"`
+	CheckIntervalSeconds  int32  `db:"check_interval_seconds" json:"check_interval_seconds"`
+	HasPerformanceReports bool   `db:"has_performance_reports" json:"has_performance_reports"`
+	HasSeoAudits          bool   `db:"has_seo_audits" json:"has_seo_audits"`
+	HasPublicStatusPage   bool   `db:"has_public_status_page" json:"has_public_status_page"`
 }
 
 func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) error {
@@ -46,11 +47,11 @@ VALUES ($1 , $2, $3, $4, $5)
 `
 
 type CreateSubscriptionParams struct {
-	UserID               uuid.UUID
-	PlanID               int32
-	Status               string
-	StripeSubscriptionID sql.NullString
-	CurrentPeriodEndsAt  sql.NullTime
+	UserID               uuid.UUID      `db:"user_id" json:"user_id"`
+	PlanID               int32          `db:"plan_id" json:"plan_id"`
+	Status               string         `db:"status" json:"status"`
+	StripeSubscriptionID sql.NullString `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+	CurrentPeriodEndsAt  *time.Time     `db:"current_period_ends_at" json:"current_period_ends_at"`
 }
 
 func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error {
@@ -152,10 +153,10 @@ VALUES ($1, $2, $3, $4)
 `
 
 type RegisterUserParams struct {
-	Name            string
-	Email           string
-	PasswordHash    string
-	EmailVerifiedAt sql.NullTime
+	Name            string     `db:"name" json:"name"`
+	Email           string     `db:"email" json:"email"`
+	PasswordHash    string     `db:"password_hash" json:"password_hash"`
+	EmailVerifiedAt *time.Time `db:"email_verified_at" json:"email_verified_at"`
 }
 
 func (q *Queries) RegisterUser(ctx context.Context, arg RegisterUserParams) error {
@@ -174,8 +175,8 @@ WHERE email = $1 AND password_hash = $2
 `
 
 type SignInUserParams struct {
-	Email        string
-	PasswordHash string
+	Email        string `db:"email" json:"email"`
+	PasswordHash string `db:"password_hash" json:"password_hash"`
 }
 
 func (q *Queries) SignInUser(ctx context.Context, arg SignInUserParams) (User, error) {

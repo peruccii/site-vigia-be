@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"peruccii/site-vigia-be/db"
-	"peruccii/site-vigia-be/internal/dto"
 )
 
 type AuthRepository struct {
@@ -21,6 +20,6 @@ func (r *AuthRepository) RegisterUser(ctx context.Context, input db.RegisterUser
 	return r.queries.RegisterUser(ctx, input)
 }
 
-func (r *AuthRepository) SignInUser(ctx context.Context, input db.SignInUserParams) (dto.SignInUserResponse, error) {
+func (r *AuthRepository) SignInUser(ctx context.Context, input db.SignInUserParams) (db.User, error) {
 	return r.queries.SignInUser(ctx, input)
 }
