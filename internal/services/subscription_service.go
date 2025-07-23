@@ -35,7 +35,7 @@ func (s *subscriptionService) CreateSubscription(ctx context.Context, input dto.
 		return fmt.Errorf("failed to check existing subscription: %w", err)
 	}
 
-	if err == nil && existingSubscription.StripeSubscriptionID.Valid {
+	if err == nil && existingSubscription.ID.String() != "" {
 		return ErrUserAlreadyExists
 	}
 

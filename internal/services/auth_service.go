@@ -32,7 +32,7 @@ func NewAuthService(repo *repository.AuthRepository, userRepo *repository.UserRe
 
 func (s *authService) SignInUser(ctx context.Context, input dto.SignInUserRequest) (dto.SignInUserResponse, error) {
 	if err := s.validator.Struct(input); err != nil {
-		return dto.SignInUserResponse{}, fmt.Errorf("%wr: %var", ErrInvalidInput)
+		return dto.SignInUserResponse{}, fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 
 	existingUser, err := s.userRepo.GetUserByEmail(ctx, input.Email)

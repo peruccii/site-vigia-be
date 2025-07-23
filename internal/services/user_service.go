@@ -62,7 +62,7 @@ func (s *userService) RegisterUser(ctx context.Context, input dto.RegisterUserRe
 		Name:            strings.TrimSpace(input.Name),
 		Email:           strings.ToLower(strings.TrimSpace(input.Email)),
 		PasswordHash:    hashPassword,
-		EmailVerifiedAt: sql.NullTime{Valid: false},
+		EmailVerifiedAt: nil,
 	}
 
 	if err := s.repo.RegisterUser(ctx, user); err != nil {

@@ -50,14 +50,14 @@ type SeoAudit struct {
 }
 
 type Subscription struct {
-	ID                   uuid.UUID      `db:"id" json:"id"`
-	UserID               uuid.UUID      `db:"user_id" json:"user_id"`
-	PlanID               int32          `db:"plan_id" json:"plan_id"`
-	Status               string         `db:"status" json:"status"`
-	StripeSubscriptionID sql.NullString `db:"stripe_subscription_id" json:"stripe_subscription_id"`
-	CurrentPeriodEndsAt  *time.Time     `db:"current_period_ends_at" json:"current_period_ends_at"`
-	CreatedAt            time.Time      `db:"created_at" json:"created_at"`
-	UpdatedAt            time.Time      `db:"updated_at" json:"updated_at"`
+	ID                   uuid.UUID  `db:"id" json:"id"`
+	UserID               uuid.UUID  `db:"user_id" json:"user_id"`
+	PlanID               int32      `db:"plan_id" json:"plan_id"`
+	Status               string     `db:"status" json:"status"`
+	StripeSubscriptionID *string    `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+	CurrentPeriodEndsAt  *time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
+	CreatedAt            time.Time  `db:"created_at" json:"created_at"`
+	UpdatedAt            time.Time  `db:"updated_at" json:"updated_at"`
 }
 
 type UptimeCheck struct {

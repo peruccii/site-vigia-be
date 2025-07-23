@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	"peruccii/site-vigia-be/internal/api"
-
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
+	"peruccii/site-vigia-be/internal/api"
 )
 
 func main() {
