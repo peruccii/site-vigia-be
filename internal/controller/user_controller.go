@@ -60,7 +60,7 @@ func (ctrl *userController) FindByEmail(c *gin.Context) {
 		ID:              user.ID.String(),
 		Name:            user.Name,
 		Email:           user.Email,
-		EmailVerifiedAt: user.EmailVerifiedAt.String(),
+		EmailVerifiedAt: user.EmailVerifiedAt,
 		CreatedAt:       user.CreatedAt.Local().String(),
 		UpdatedAt:       user.UpdatedAt.Local().String(),
 	}

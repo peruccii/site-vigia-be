@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS subscriptions;
+DROP TABLE IF EXISTS plans;
+DROP TABLE IF EXISTS seo_audits;
+DROP INDEX IF EXISTS idx_performance_reports_website_id_checked_at;
+DROP TABLE IF EXISTS performance_reports;
+DROP TABLE IF EXISTS incidents;
+DROP INDEX IF EXISTS idx_uptime_checks_website_id_checked_at;
+DROP TABLE IF EXISTS uptime_checks;
+DROP TABLE IF EXISTS websites;
+DROP TABLE IF EXISTS users;

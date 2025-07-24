@@ -1,8 +1,15 @@
 package utils
 
-import "golang.org/x/crypto/bcrypt"
+import (
+	"fmt"
 
-func VerifyPassword(password, hash string) bool {
+	"golang.org/x/crypto/bcrypt"
+)
+
+func VerifyPassword(password, hash string) error {
 	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
+	if err != nil {
+		return fmt.Errorf("invalid password: %w", err)
+	}
+	return nil
 }

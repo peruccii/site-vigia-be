@@ -4,11 +4,41 @@ import (
 	"database/sql"
 	"log"
 	"os"
+	"time"
+
+	"peruccii/site-vigia-be/internal/api"
+	"peruccii/site-vigia-be/internal/database"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"peruccii/site-vigia-be/internal/api"
 )
+
+func connectWithRetry(databaseURL string, maxRetries int) (*sql.DB, error) {
+	var db *sql.DB
+	var err error
+
+	for i := 0; i < maxRetries; i++ {
+		db, err = sql.Open("postgres", databaseURL)
+		if err != nil {
+			log.Printf("Attempt %d: Failed to open database connection: %v", i+1, err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		err = db.Ping()
+		if err != nil {
+			log.Printf("Attempt %d: Failed to ping database: %v", i+1, err)
+			db.Close()
+			time.Sleep(2 * time.Second)
+			continue
+		}
+
+		log.Println("Successfully connected to database")
+		return db, nil
+	}
+
+	return nil, err
+}
 
 func main() {
 	if err := godotenv.Load(); err != nil {
@@ -20,17 +50,17 @@ func main() {
 		log.Fatal("DATABASE_URL environment variable is not set")
 	}
 
-	db, err := sql.Open("postgres", databaseURL)
+	log.Printf("Using DATABASE_URL: %s", databaseURL)
+
+	db, err := connectWithRetry(databaseURL, 10)
 	if err != nil {
-		log.Fatal("Failed to connect to database:", err)
+		log.Fatal("Failed to connect to database after retries:", err)
 	}
 	defer db.Close()
 
-	if err := db.Ping(); err != nil {
-		log.Fatal("Failed to ping database:", err)
+	if err := database.RunMigrations(db); err != nil {
+		log.Fatal("Failed to run migrations:", err)
 	}
-
-	log.Println("Successfully connected to database")
 
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(25)

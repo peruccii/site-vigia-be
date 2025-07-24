@@ -1,45 +1,45 @@
-# docker-compose.yml
+version: "3.8"
 
-version: '3.8' # Define a versão da sintaxe do Compose
-
-# Define os serviços (contêineres)
 services:
-  # Serviço 1: Nosso backend em Go
   backend:
-    build: . # Constrói a imagem a partir do Dockerfile no diretório atual
+    build: .
     container_name: sitevigia_backend
     ports:
-      - "8080:8080" # Mapeia a porta 8080 do host para a 8080 do contêiner
+      - "8080:8080"
     env_file:
-      - .env # Carrega as variáveis de ambiente do arquivo .env
+      - .env
     environment:
-      # Passa a URL de conexão para o Go, usando o nome do serviço 'db' como host
       - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
     depends_on:
-      - db # Garante que o serviço 'db' inicie ANTES do 'backend'
-    networks:
-      - sitevigia_network
-    restart: unless-stopped # Reinicia o contêiner se ele parar, a menos que tenhamos parado manualmente
-
-  # Serviço 2: O banco de dados PostgreSQL
-  db:
-    image: postgres:16-alpine # Usa uma imagem oficial e leve do Postgres
-    container_name: sitevigia_db
-    env_file:
-      - .env # Carrega as mesmas variáveis para criar o banco de dados e o usuário
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data # Persiste os dados do banco de dados
+      db:
+        condition: service_healthy
     networks:
       - sitevigia_network
     restart: unless-stopped
 
-# Define os volumes
-volumes:
-  postgres_data: # O volume nomeado que guarda os dados do nosso banco
+  db:
+    image: postgres:16-alpine
+    container_name: sitevigia_db
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sitevigia_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-# Define as redes
+volumes:
+  postgres_data:
+
 networks:
   sitevigia_network:
-    driver: bridge # Rede padrão para comunicação entre os contêineres
+    driver: bridge

@@ -41,10 +41,6 @@ func (s *authService) SignInUser(ctx context.Context, input dto.SignInUserReques
 		return dto.SignInUserResponse{}, fmt.Errorf("failed to check existing user: %w", err)
 	}
 
-	if err == nil && existingUser.Email != "" {
-		return dto.SignInUserResponse{}, ErrUserAlreadyExists
-	}
-
 	utils.VerifyPassword(input.Password, existingUser.PasswordHash)
 
 	access_token, _ := utils.GenerateAccessToken(
@@ -61,4 +57,40 @@ func (s *authService) SignInUser(ctx context.Context, input dto.SignInUserReques
 		RefreshToken: refresh_token,
 		ExpiresIn:    10,
 	}, nil
+}
+
+func (s *authService) RecoverPassword(ctx context.Context, input dto.RecoverPasswordRequest) (string, error) {
+	if err := s.validator.Struct(input); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidInput, err)
+	}
+
+	_, err := s.userRepo.GetUserByEmail(ctx, input.Email)
+
+	if err != nil && err != sql.ErrNoRows {
+		return "", fmt.Errorf("failed to check existing user: %w", err)
+	}
+
+	token, _ := utils.GenerateEmailToken(input.Email)
+
+	SendEmail(input.Email, token)
+
+	return "email sent", nil
+}
+
+func (s *authService) IsTokenValid(ctx context.Context, token string) (string, bool) {
+	claims, err := utils.VerifyToken(token)
+	if err != nil {
+		return "token is invalid", false
+	}
+	email, ok := claims["email"].(string)
+	if !ok {
+		return "email claim is missing or invalid", false
+	}
+	return email, true
+}
+
+func (s *authService) ResetPassword(ctx context.Context, input dto.ResetPasswordRequest) (string, error) {
+	if err := s.validator.Struct(input); err != nil {
+		return "", fmt.Errorf("%w: %v", ErrInvalidInput, err)
+	}
 }

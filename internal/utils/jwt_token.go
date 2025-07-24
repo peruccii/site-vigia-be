@@ -69,3 +69,25 @@ func VerifyToken(tokenString string) (jwt.MapClaims, error) {
 
 	return claims, nil
 }
+
+func GenerateEmailToken(email string) (string, error) {
+	expirationTime := time.Now().Add(1 * time.Hour)
+
+	claims := &Claims{
+		Email: email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    "site-vigia",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return "Error creating token email", err
+	}
+
+	return tokenString, nil
+}

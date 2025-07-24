@@ -41,7 +41,7 @@ var (
 
 func (s *userService) RegisterUser(ctx context.Context, input dto.RegisterUserRequest) error {
 	if err := s.validator.Struct(input); err != nil {
-		return fmt.Errorf("%w: %v", ErrInvalidInput, err)
+		return fmt.Errorf("%w: %v", ErrInvalidInput, err.Error())
 	}
 
 	exitingUser, err := s.repo.GetUserByEmail(ctx, input.Email)

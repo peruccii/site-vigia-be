@@ -33,6 +33,7 @@ WORKDIR /app
 
 # Copia APENAS o binário compilado do estágio "builder".
 COPY --from=builder /app/server .
+COPY --from=builder /app/migrations ./migrations
 
 # Expõe a porta 8080 para que o Docker saiba que nosso app
 # escuta nesta porta.

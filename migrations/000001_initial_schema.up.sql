@@ -1,0 +1,83 @@
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    email_verified_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()    
+);
+
+CREATE TABLE websites (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    url VARCHAR(2048) NOT NULL,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    check_interval_seconds INT NOT NULL DEFAULT 300,
+    last_checked_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE uptime_checks (
+    id SERIAL PRIMARY KEY,
+    website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    is_up BOOLEAN NOT NULL,
+    response_time_ms INT NOT NULL,
+    status_code INT NOT NULL,
+    error_message TEXT NULL
+);
+
+CREATE INDEX idx_uptime_checks_website_id_checked_at ON uptime_checks(website_id, checked_at DESC);
+
+CREATE TABLE incidents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    started_at TIMESTAMPTZ NOT NULL,
+    ended_at TIMESTAMPTZ NULL,
+    duration_seconds INT NULL,
+    cause VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE performance_reports (
+    id BIGSERIAL PRIMARY KEY,
+    website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    checked_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    ttfb_ms INT NULL,        
+    lcp_ms INT NULL,        
+    full_load_time_ms INT NULL,
+    page_size_kb INT NULL
+);
+
+CREATE INDEX idx_performance_reports_website_id_checked_at ON performance_reports(website_id, checked_at DESC);
+
+CREATE TABLE seo_audits (
+    id BIGSERIAL PRIMARY KEY,
+    website_id UUID NOT NULL REFERENCES websites(id) ON DELETE CASCADE,
+    audited_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    results JSONB NOT NULL
+);
+
+CREATE TABLE plans (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) UNIQUE NOT NULL, 
+    price_monthly DECIMAL(10, 2) NOT NULL,
+    max_websites INT NOT NULL,
+    check_interval_seconds INT NOT NULL,
+    has_performance_reports BOOLEAN NOT NULL DEFAULT FALSE,
+    has_seo_audits BOOLEAN NOT NULL DEFAULT FALSE,
+    has_public_status_page BOOLEAN NOT NULL DEFAULT FALSE
+);
+
+CREATE TABLE subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    plan_id INT NOT NULL REFERENCES plans(id),
+    status VARCHAR(50) NOT NULL, 
+    stripe_subscription_id VARCHAR(255) UNIQUE NULL,
+    current_period_ends_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

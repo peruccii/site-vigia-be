@@ -3,12 +3,13 @@ package api
 import (
 	"database/sql"
 
-	"github.com/gin-gonic/gin"
 	"peruccii/site-vigia-be/db"
 	"peruccii/site-vigia-be/internal/api/middleware"
 	"peruccii/site-vigia-be/internal/controller"
 	"peruccii/site-vigia-be/internal/repository"
 	"peruccii/site-vigia-be/internal/services"
+
+	"github.com/gin-gonic/gin"
 )
 
 func SetupRouter(database *sql.DB) *gin.Engine {
@@ -43,7 +44,7 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 		plans := protected.Group("/plan").Use(middleware.AuthMiddleware(authService))
 		{
 			plans.POST("", planController.Create)
-		}
+		} 
 
 		users := protected.Group("/users").Use(middleware.AuthMiddleware(authService))
 		{
