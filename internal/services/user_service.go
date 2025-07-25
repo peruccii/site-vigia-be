@@ -10,6 +10,7 @@ import (
 	"peruccii/site-vigia-be/db"
 	"peruccii/site-vigia-be/internal/dto"
 	"peruccii/site-vigia-be/internal/repository"
+	"peruccii/site-vigia-be/internal/utils"
 
 	"github.com/go-playground/validator/v10"
 	"golang.org/x/crypto/bcrypt"
@@ -53,7 +54,7 @@ func (s *userService) RegisterUser(ctx context.Context, input dto.RegisterUserRe
 		return ErrUserAlreadyExists
 	}
 
-	hashPassword, err := hashPassword(input.Password)
+	hashPassword, err := utils.HashPassword(input.Password)
 	if err != nil {
 		return fmt.Errorf("%w: %v", ErrHashPassword, err)
 	}
@@ -74,9 +75,4 @@ func (s *userService) RegisterUser(ctx context.Context, input dto.RegisterUserRe
 
 func (s *userService) FindByEmail(ctx context.Context, email string) (db.User, error) {
 	return s.repo.GetUserByEmail(ctx, email)
-}
-
-func hashPassword(password string) (string, error) {
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
-	return string(bytes), err
 }

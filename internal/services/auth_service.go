@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"peruccii/site-vigia-be/db"
 	"peruccii/site-vigia-be/internal/dto"
 	"peruccii/site-vigia-be/internal/repository"
 	"peruccii/site-vigia-be/internal/utils"
@@ -89,8 +90,23 @@ func (s *authService) IsTokenValid(ctx context.Context, token string) (string, b
 	return email, true
 }
 
-func (s *authService) ResetPassword(ctx context.Context, input dto.ResetPasswordRequest) (string, error) {
+func (s *authService) ResetPassword(ctx context.Context, email string, input dto.ResetPasswordRequest) error {
 	if err := s.validator.Struct(input); err != nil {
-		return "", fmt.Errorf("%w: %v", ErrInvalidInput, err)
+		fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
+
+	user, _ := s.userRepo.GetUserByEmail(ctx, email)
+
+	newPassword, err := utils.HashPassword(input.NewPassword)
+	if err != nil {
+		fmt.Errorf("%w %v", ErrHashPassword, err)
+	}
+
+	if err := s.repo.UpdatePassword(ctx, db.UpdatePasswordParams{
+		ID:           user.ID,
+		PasswordHash: newPassword,
+	}); err != nil {
+	 	fmt.Errorf("failed to update password 	%w 	%v ", err)
+	}
+	return nil
 }

@@ -23,3 +23,7 @@ func (r *AuthRepository) RegisterUser(ctx context.Context, input db.RegisterUser
 func (r *AuthRepository) SignInUser(ctx context.Context, input db.SignInUserParams) (db.User, error) {
 	return r.queries.SignInUser(ctx, input)
 }
+
+func (r *AuthRepository) UpdatePassword(ctx context.Context, input db.UpdatePasswordParams) error {
+	return r.queries.UpdatePassword(ctx, input)
+}

@@ -22,6 +22,11 @@ WHERE stripe_subscription_id = $1;
 INSERT INTO users (name, email, password_hash, email_verified_at)
 VALUES ($1, $2, $3, $4);
 
+-- name: UpdatePassword :exec
+UPDATE users
+SET password_hash = $2 
+WHERE id = $1;
+
 -- name: CreatePlan :exec
 INSERT INTO plans (name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page )
 VALUES ($1, $2, $3, $4, $5, $6, $7);
