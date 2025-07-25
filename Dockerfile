@@ -23,10 +23,12 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server .
 
 # ---- Estágio 2: Final ----
-# Agora usamos uma imagem "vazia" (scratch) que não tem NADA.
-# Isso torna nossa imagem final extremamente pequena e segura.
-# A imagem `alpine` é uma alternativa caso precise de um shell para depuração.
-FROM scratch
+# Usamos Alpine que inclui certificados CA para conexões HTTPS.
+# Isso é necessário para verificar certificados SSL/TLS de APIs externas.
+FROM alpine:latest
+
+# Instala certificados CA atualizados
+RUN apk --no-cache add ca-certificates
 
 # Define o diretório de trabalho.
 WORKDIR /app

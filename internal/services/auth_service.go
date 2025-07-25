@@ -21,6 +21,8 @@ type authService struct {
 
 type AuthService interface {
 	SignInUser(ctx context.Context, input dto.SignInUserRequest) (dto.SignInUserResponse, error)
+	RecoverPassword(ctx context.Context, input dto.RecoverPasswordRequest) (string, error)
+	ResetPassword(ctx context.Context, email string, input dto.ResetPasswordRequest) error
 }
 
 func NewAuthService(repo *repository.AuthRepository, userRepo *repository.UserRepository) *authService {
@@ -92,21 +94,21 @@ func (s *authService) IsTokenValid(ctx context.Context, token string) (string, b
 
 func (s *authService) ResetPassword(ctx context.Context, email string, input dto.ResetPasswordRequest) error {
 	if err := s.validator.Struct(input); err != nil {
-		fmt.Errorf("%w: %v", ErrInvalidInput, err)
+		return fmt.Errorf("%w: %v", ErrInvalidInput, err)
 	}
 
 	user, _ := s.userRepo.GetUserByEmail(ctx, email)
 
 	newPassword, err := utils.HashPassword(input.NewPassword)
 	if err != nil {
-		fmt.Errorf("%w %v", ErrHashPassword, err)
+		return fmt.Errorf("%w %v", ErrHashPassword, err)
 	}
 
 	if err := s.repo.UpdatePassword(ctx, db.UpdatePasswordParams{
 		ID:           user.ID,
 		PasswordHash: newPassword,
 	}); err != nil {
-	 	fmt.Errorf("failed to update password 	%w 	%v ", err)
+		return fmt.Errorf("failed to update password %w", err)
 	}
 	return nil
 }

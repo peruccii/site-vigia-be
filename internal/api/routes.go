@@ -37,6 +37,8 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 	{
 		auth.POST("/register", userController.Register)
 		auth.POST("/login", authController.SignInUser)
+		auth.PUT("/recover-password", authController.RecoverPassword).Use(middleware.AuthMiddleware(authService))
+		auth.PATCH("/reset-password", authController.ResetPassword).Use(middleware.AuthMiddleware(authService))
 	}
 
 	protected := api.Group("")
@@ -44,7 +46,7 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 		plans := protected.Group("/plan").Use(middleware.AuthMiddleware(authService))
 		{
 			plans.POST("", planController.Create)
-		} 
+		}
 
 		users := protected.Group("/users").Use(middleware.AuthMiddleware(authService))
 		{

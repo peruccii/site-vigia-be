@@ -13,7 +13,6 @@ import (
 	"peruccii/site-vigia-be/internal/utils"
 
 	"github.com/go-playground/validator/v10"
-	"golang.org/x/crypto/bcrypt"
 )
 
 type userService struct {
