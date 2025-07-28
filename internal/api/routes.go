@@ -43,14 +43,19 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 
 	protected := api.Group("")
 	{
-		plans := protected.Group("/plan").Use(middleware.AuthMiddleware(authService))
-		{
-			plans.POST("", planController.Create)
-		}
-
 		users := protected.Group("/users").Use(middleware.AuthMiddleware(authService))
 		{
 			users.GET("/:email", userController.FindByEmail)
+		}
+
+		websites := protected.Group("/websites").Use(middleware.AuthMiddleware(authService))
+		{
+			websites.POST("")
+		}
+
+		plans := protected.Group("/plan").Use(middleware.AuthMiddleware(authService))
+		{
+			plans.POST("", planController.Create)
 		}
 
 		subscriptions := protected.Group("/subscriptions").Use(middleware.AuthMiddleware(authService))
