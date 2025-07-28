@@ -8,3 +8,4 @@ DROP INDEX IF EXISTS idx_uptime_checks_website_id_checked_at;
 DROP TABLE IF EXISTS uptime_checks;
 DROP TABLE IF EXISTS websites;
 DROP TABLE IF EXISTS users;
+DROP TABLE IF EXISTS payments;

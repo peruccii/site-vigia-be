@@ -7,10 +7,47 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+const createPayment = `-- name: CreatePayment :exec
+INSERT INTO payments (user_id, subscription_id, stripe_payment_intent_id, stripe_invoice_id, stripe_session_id, amount_cents, currency, status, payment_method, failure_reason, paid_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+`
+
+type CreatePaymentParams struct {
+	UserID                uuid.UUID      `db:"user_id" json:"user_id"`
+	SubscriptionID        uuid.UUID      `db:"subscription_id" json:"subscription_id"`
+	StripePaymentIntentID string         `db:"stripe_payment_intent_id" json:"stripe_payment_intent_id"`
+	StripeInvoiceID       sql.NullString `db:"stripe_invoice_id" json:"stripe_invoice_id"`
+	StripeSessionID       sql.NullString `db:"stripe_session_id" json:"stripe_session_id"`
+	AmountCents           int32          `db:"amount_cents" json:"amount_cents"`
+	Currency              string         `db:"currency" json:"currency"`
+	Status                string         `db:"status" json:"status"`
+	PaymentMethod         string         `db:"payment_method" json:"payment_method"`
+	FailureReason         *string        `db:"failure_reason" json:"failure_reason"`
+	PaidAt                *time.Time     `db:"paid_at" json:"paid_at"`
+}
+
+func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) error {
+	_, err := q.db.ExecContext(ctx, createPayment,
+		arg.UserID,
+		arg.SubscriptionID,
+		arg.StripePaymentIntentID,
+		arg.StripeInvoiceID,
+		arg.StripeSessionID,
+		arg.AmountCents,
+		arg.Currency,
+		arg.Status,
+		arg.PaymentMethod,
+		arg.FailureReason,
+		arg.PaidAt,
+	)
+	return err
+}
 
 const createPlan = `-- name: CreatePlan :exec
 INSERT INTO plans (name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page )
@@ -62,6 +99,27 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		arg.CurrentPeriodEndsAt,
 	)
 	return err
+}
+
+const getPlanByID = `-- name: GetPlanByID :one
+SELECT id, name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page FROM plans
+WHERE id = $1
+`
+
+func (q *Queries) GetPlanByID(ctx context.Context, id int32) (Plan, error) {
+	row := q.db.QueryRowContext(ctx, getPlanByID, id)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceMonthly,
+		&i.MaxWebsites,
+		&i.CheckIntervalSeconds,
+		&i.HasPerformanceReports,
+		&i.HasSeoAudits,
+		&i.HasPublicStatusPage,
+	)
+	return i, err
 }
 
 const getPlanByName = `-- name: GetPlanByName :one
@@ -206,5 +264,21 @@ type UpdatePasswordParams struct {
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
 	_, err := q.db.ExecContext(ctx, updatePassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
+const updateSubscriptionStatus = `-- name: UpdateSubscriptionStatus :exec
+UPDATE subscriptions
+SET status = $1
+WHERE id = $2
+`
+
+type UpdateSubscriptionStatusParams struct {
+	Status string    `db:"status" json:"status"`
+	ID     uuid.UUID `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionStatus, arg.Status, arg.ID)
 	return err
 }

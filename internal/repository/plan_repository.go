@@ -4,6 +4,8 @@ import (
 	"context"
 
 	"peruccii/site-vigia-be/db"
+
+	"github.com/google/uuid"
 )
 
 type PlanRepository struct {
@@ -22,4 +24,8 @@ func (r *PlanRepository) CreatePlan(ctx context.Context, input db.CreatePlanPara
 
 func (r *PlanRepository) GetPlanByName(ctx context.Context, name string) (db.Plan, error) {
 	return r.queries.GetPlanByName(ctx, name)
+}
+
+func (r *PlanRepository) GetPlanByID(ctx context.Context, id uuid.UUID) (db.Plan, error) {
+	return r.queries.GetPlanByID(ctx, id)
 }

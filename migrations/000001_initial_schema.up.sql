@@ -81,3 +81,25 @@ CREATE TABLE subscriptions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+CREATE TABLE payments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    subscription_id UUID NOT NULL REFERENCES user_subscriptions(id) ON DELETE CASCADE,
+    stripe_payment_intent_id VARCHAR(255) NOT NULL, -- ID do PaymentIntent no Stripe
+    stripe_invoice_id VARCHAR(255) NULL,            -- ID da fatura no Stripe
+    stripe_session_id VARCHAR(255) NULL,            -- ID da sessão
+    amount_cents INT NOT NULL,                      -- Valor em centavos
+    currency VARCHAR(3) NOT NULL DEFAULT 'BRL',
+    status VARCHAR(50) NOT NULL,                    -- 'succeeded', 'pending', 'failed', 'canceled'
+    payment_method VARCHAR(50) NOT NULL,            -- 'card', 'pix', 'boleto'
+    failure_reason TEXT NULL,                       -- Motivo da falha (se houver)
+    paid_at TIMESTAMPTZ NULL,                       -- Quando foi pago
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    
+    UNIQUE(stripe_payment_intent_id)
+);
+
+CREATE INDEX idx_payments_user_id_created_at ON payments(user_id, created_at DESC);
+CREATE INDEX idx_payments_status ON payments(status);

@@ -21,6 +21,23 @@ type Incident struct {
 	Cause           string        `db:"cause" json:"cause"`
 }
 
+type Payment struct {
+	ID                    uuid.UUID      `db:"id" json:"id"`
+	UserID                uuid.UUID      `db:"user_id" json:"user_id"`
+	SubscriptionID        uuid.UUID      `db:"subscription_id" json:"subscription_id"`
+	StripePaymentIntentID string         `db:"stripe_payment_intent_id" json:"stripe_payment_intent_id"`
+	StripeInvoiceID       sql.NullString `db:"stripe_invoice_id" json:"stripe_invoice_id"`
+	StripeSessionID       sql.NullString `db:"stripe_session_id" json:"stripe_session_id"`
+	AmountCents           int32          `db:"amount_cents" json:"amount_cents"`
+	Currency              string         `db:"currency" json:"currency"`
+	Status                string         `db:"status" json:"status"`
+	PaymentMethod         string         `db:"payment_method" json:"payment_method"`
+	FailureReason         *string        `db:"failure_reason" json:"failure_reason"`
+	PaidAt                *time.Time     `db:"paid_at" json:"paid_at"`
+	CreatedAt             time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt             time.Time      `db:"updated_at" json:"updated_at"`
+}
+
 type PerformanceReport struct {
 	ID             int64         `db:"id" json:"id"`
 	WebsiteID      uuid.UUID     `db:"website_id" json:"website_id"`

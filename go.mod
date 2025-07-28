@@ -11,6 +11,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.10.9
 	github.com/resend/resend-go/v2 v2.21.0
+	github.com/stripe/stripe-go/v82 v82.3.0
 	golang.org/x/crypto v0.37.0
 )
 

@@ -23,3 +23,7 @@ func (r *SubscriptionRepository) CreateSubscription(ctx context.Context, input d
 func (r *SubscriptionRepository) GetSubscriptionByStripeSbId(ctx context.Context, subscription_stripe_id *string) (db.Subscription, error) {
 	return r.queries.GetSubscriptionByStripeSbId(ctx, subscription_stripe_id)
 }
+
+func (r *SubscriptionRepository) UpdateSubscriptionStatus(ctx context.Context, input db.UpdateSubscriptionStatusParams) error {
+	return r.queries.UpdateSubscriptionStatus(ctx, input)
+}
