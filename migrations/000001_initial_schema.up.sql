@@ -66,6 +66,7 @@ CREATE TABLE plans (
     price_monthly DECIMAL(10, 2) NOT NULL,
     max_websites INT NOT NULL,
     check_interval_seconds INT NOT NULL,
+    stripe_price_id VARCHAR(255) NULL,
     has_performance_reports BOOLEAN NOT NULL DEFAULT FALSE,
     has_seo_audits BOOLEAN NOT NULL DEFAULT FALSE,
     has_public_status_page BOOLEAN NOT NULL DEFAULT FALSE
@@ -85,7 +86,7 @@ CREATE TABLE subscriptions (
 CREATE TABLE payments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    subscription_id UUID NOT NULL REFERENCES user_subscriptions(id) ON DELETE CASCADE,
+    subscription_id UUID NOT NULL REFERENCES subscriptions(id) ON DELETE CASCADE,
     stripe_payment_intent_id VARCHAR(255) NOT NULL, -- ID do PaymentIntent no Stripe
     stripe_invoice_id VARCHAR(255) NULL,            -- ID da fatura no Stripe
     stripe_session_id VARCHAR(255) NULL,            -- ID da sessão

@@ -13,6 +13,12 @@ type SubscriptionHandler struct {
 	stripeService services.StripeService
 }
 
+func NewSubscriptionHandler(stripeService services.StripeService) *SubscriptionHandler {
+	return &SubscriptionHandler{
+		stripeService: stripeService,
+	}
+}
+
 // POST /subscriptions/checkout
 func (h *SubscriptionHandler) CreateCheckout(c *gin.Context) {
 	var req struct {
@@ -56,6 +62,7 @@ func (h *SubscriptionHandler) CreateCheckout(c *gin.Context) {
 	})
 }
 
+/*
 // POST /subscriptions/cancel
 func (h *SubscriptionHandler) CancelSubscription(c *gin.Context) {
 	var req struct {
@@ -76,7 +83,7 @@ func (h *SubscriptionHandler) CancelSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Subscription will be canceled at the end of current period",
 	})
-}
+}*/
 
 // POST /webhook/stripe
 func (h *SubscriptionHandler) HandleWebhook(c *gin.Context) {

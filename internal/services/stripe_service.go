@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"time"
 
 	"peruccii/site-vigia-be/db"
-	"peruccii/site-vigia-be/internal/dto"
 	"peruccii/site-vigia-be/internal/repository"
 
 	"github.com/google/uuid"
@@ -23,7 +23,7 @@ import (
 type StripeService interface {
 	CreateCustomer(ctx context.Context, name, email string) (*stripe.Customer, error)
 	CreateSubscriptionCheckout(ctx context.Context, req *CreateSubscriptionRequest) (*stripe.CheckoutSession, error)
-	CancelSubscription(ctx context.Context, subscriptionID string) error
+	CancelSubscription(ctx context.Context, subscriptionID uuid.UUID) error
 	ProcessWebhook(ctx context.Context, payload []byte, signature string) error
 	GetSubscription(subscriptionID string) (*stripe.Subscription, error)
 }
@@ -52,7 +52,7 @@ func NewStripeService(
 
 type CreateSubscriptionRequest struct {
 	UserID     uuid.UUID `json:"user_id"`
-	PlanID     uuid.UUID `json:"plan_id"`
+	PlanID     int32     `json:"plan_id"`
 	UserName   string    `json:"user_name"`
 	UserEmail  string    `json:"user_email"`
 	SuccessURL string    `json:"success_url"`
@@ -98,8 +98,8 @@ func (s *StripeProvider) CreateSubscriptionCheckout(ctx context.Context, req *Cr
 		return nil, fmt.Errorf("plano não encontrado: %w", err)
 	}
 
-	if *&plan.PriceMonthly == "" {
-		return nil, fmt.Errorf("plano %s não tem integração com Stripe configurada", plan.Name)
+	if plan.StripePriceID == nil || *plan.StripePriceID == "" {
+		return nil, fmt.Errorf("plano %s não tem um Price ID do Stripe configurado", plan.Name)
 	}
 
 	successURL := req.SuccessURL
@@ -126,14 +126,14 @@ func (s *StripeProvider) CreateSubscriptionCheckout(ctx context.Context, req *Cr
 
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
-				Price:    stripe.String(plan.PriceMonthly),
+				Price:    stripe.String(*plan.StripePriceID),
 				Quantity: stripe.Int64(1),
 			},
 		},
 
 		Metadata: map[string]string{
 			"user_id":   req.UserID.String(),
-			"plan_id":   req.PlanID.String(),
+			"plan_id":   strconv.Itoa(int(req.PlanID)),
 			"plan_name": plan.Name,
 			"source":    "site-vigia",
 		},
@@ -141,7 +141,7 @@ func (s *StripeProvider) CreateSubscriptionCheckout(ctx context.Context, req *Cr
 		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
 			Metadata: map[string]string{
 				"user_id": req.UserID.String(),
-				"plan_id": req.PlanID.String(),
+				"plan_id": strconv.Itoa(int(req.PlanID)),
 			},
 		},
 
@@ -197,16 +197,12 @@ func (s *StripeProvider) ProcessWebhook(ctx context.Context, payload []byte, sig
 	switch event.Type {
 	case "checkout.session.completed":
 		return s.handleCheckoutCompleted(ctx, event)
-	case "customer.subscription.created":
-		return s.handleSubscriptionCreated(ctx, event)
+	case "invoice.payment_succeeded":
+		return s.handlePaymentSucceeded(ctx, event)
 	case "customer.subscription.updated":
 		return s.handleSubscriptionUpdated(ctx, event)
 	case "customer.subscription.deleted":
 		return s.handleSubscriptionDeleted(ctx, event)
-	case "invoice.payment_succeeded":
-		return s.handlePaymentSucceeded(ctx, event)
-	case "invoice.payment_failed":
-		return s.handlePaymentFailed(ctx, event)
 	default:
 		log.Printf("Unhandled event type: %s", event.Type)
 	}
@@ -216,9 +212,12 @@ func (s *StripeProvider) ProcessWebhook(ctx context.Context, payload []byte, sig
 
 func (s *StripeProvider) handleCheckoutCompleted(ctx context.Context, event stripe.Event) error {
 	var session stripe.CheckoutSession
-
 	if err := json.Unmarshal(event.Data.Raw, &session); err != nil {
-		return fmt.Errorf("erro ao fazer parse do evento: %w", err)
+		return fmt.Errorf("erro ao fazer parse da sessão do evento: %w", err)
+	}
+
+	if session.Mode != stripe.CheckoutSessionModeSubscription {
+		return nil
 	}
 
 	userID, err := uuid.Parse(session.Metadata["user_id"])
@@ -226,139 +225,138 @@ func (s *StripeProvider) handleCheckoutCompleted(ctx context.Context, event stri
 		return fmt.Errorf("invalid user_id in metadata: %w", err)
 	}
 
-	planID, err := uuid.Parse(session.Metadata["plan_id"])
+	// converting string to int64
+	planID, err := strconv.ParseInt(session.Metadata["plan_id"], 10, 32)
 	if err != nil {
 		return fmt.Errorf("invalid plan_id in metadata: %w", err)
 	}
 
-	plan, err := s.planRepo.GetPlanByID(ctx, planID)
+	stripeSubID := session.Subscription.ID
+	if stripeSubID == "" {
+		return fmt.Errorf("stripe_subscription_id não encontrado na sessão de checkout")
+	}
+
+	stripeSub, err := s.GetSubscription(stripeSubID)
 	if err != nil {
-		return fmt.Errorf("plan not found: %w", err)
+		return fmt.Errorf("erro ao buscar assinatura no Stripe %s: %w", stripeSubID, err)
 	}
 
-	paymentReq := &dto.CreatePaymentRequest{
-		UserID:            userID,
-		PlanID:            planID,
-		StripeSessionID:   &session.ID,
-		Amount:            plan.PriceMonthly,
-		Status:            string(PaymentPending),
-		PaymentMethodType: "checkout_session",
+	subParams := db.CreateSubscriptionParams{
+		UserID:               userID,
+		PlanID:               int32(planID),
+		Status:               string(stripeSub.Status),
+		StripeSubscriptionID: &stripeSubID,
+		CurrentPeriodEndsAt:  time.Unix(stripeSub.EndedAt, 0),
 	}
 
-	err = s.paymentRepo.Create(ctx, paymentReq)
+	err = s.subscriptionRepo.CreateSubscription(ctx, subParams)
 	if err != nil {
-		return fmt.Errorf("error creating payment record: %w", err)
+		// Adicionar lógica para lidar com o caso de a assinatura já existir (idempotência)
+		return fmt.Errorf("erro ao criar registro de assinatura: %w", err)
 	}
 
-	log.Printf("Checkout completed for user %s, plan %s, session %s",
-		userID, plan.Name, session.ID)
-
+	log.Printf("Assinatura %s criada com sucesso para o usuário %s", stripeSubID, userID)
 	return nil
 }
 
 func (s *StripeProvider) handlePaymentSucceeded(ctx context.Context, event stripe.Event) error {
 	var invoice stripe.Invoice
 	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
-		return fmt.Errorf("error parsing invoice  %w", err)
+		return fmt.Errorf("erro ao fazer parse da fatura (invoice): %w", err)
 	}
 
-	payment, err := s.paymentRepo.FindByStripeSubscriptionID(ctx, invoice.Customer.Subscriptions.Data[0].ID)
+	stripeSubID := invoice.Subscription.ID
+	if stripeSubID == "" {
+		return nil
+	}
+
+	subscription, err := s.subscriptionRepo.GetSubscriptionByStripeSbId(ctx, stripeSubID)
 	if err != nil {
-		return fmt.Errorf("payment not found for subscription %s: %w", invoice.Subscription.ID, err)
+		return fmt.Errorf("assinatura com stripe_id %s não encontrada no banco: %w", stripeSubID, err)
 	}
 
-	now := time.Now()
-	err = s.paymentRepo.UpdateStatus(ctx, payment.ID, string(PaymentSucceeded), nil, &now)
+	paymentParams := db.CreatePaymentParams{
+		UserID:                subscription.UserID,
+		SubscriptionID:        subscription.ID,
+		StripePaymentIntentID: invoice.PaymentIntent.ID,
+		StripeInvoiceID:       &invoice.ID,
+		AmountCents:           int(invoice.AmountPaid), // Stripe retorna em centavos
+		Currency:              string(invoice.Currency),
+		Status:                string(PaymentSucceeded),
+		PaymentMethod:         string(invoice.PaymentSettings.PaymentMethodTypes[0]), // Simplificação
+	}
+	// paidAt := time.Unix(invoice.StatusTransitions.PaidAt, 0)
+	// paymentParams.PaidAt = sql.NullTime{Time: paidAt, Valid: true}
+
+	err = s.paymentRepo.Create(ctx, paymentParams)
 	if err != nil {
-		return fmt.Errorf("error updating payment status: %w", err)
+		return fmt.Errorf("erro ao criar registro de pagamento: %w", err)
 	}
 
-	log.Printf("Payment succeeded: %s for user %s", payment.ID, payment.UserID)
-	return nil
-}
-
-func (s *StripeProvider) handlePaymentFailed(ctx context.Context, event stripe.Event) error {
-	var invoice stripe.Invoice
-	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
-		return fmt.Errorf("error parsing invoice: %w", err)
-	}
-	payment, err := s.paymentRepo.FindByStripeSubscriptionID(ctx, invoice.Subscription.ID)
+	stripeSub, err := s.GetSubscription(stripeSubID)
 	if err != nil {
-		return fmt.Errorf("payment not found: %w", err)
+		return fmt.Errorf("erro ao buscar assinatura no Stripe para atualização: %w", err)
 	}
 
-	failureReason := "Invoice payment failed"
-	if invoice.LastPaymentError != nil {
-		failureReason = invoice.LastPaymentError.Message
+	updateSubParams := db.UpdateSubscriptionPeriodParams{
+		ID:                  subscription.ID,
+		Status:              string(stripeSub.Status),
+		CurrentPeriodEndsAt: stripeSub.CurrentPeriodEnd,
 	}
-
-	err = s.paymentRepo.UpdateStatus(ctx, payment.ID, string(PaymentFailed), &failureReason, nil)
+	err = s.subscriptionRepo.UpdatePeriod(ctx, updateSubParams)
 	if err != nil {
-		return fmt.Errorf("error updating payment status: %w", err)
+		return fmt.Errorf("erro ao atualizar período da assinatura: %w", err)
 	}
 
-	log.Printf("Payment failed: %s for user %s, reason: %s",
-		payment.ID, payment.UserID, failureReason)
-
-	return nil
-}
-
-func (s *StripeProvider) handleSubscriptionCreated(ctx context.Context, event stripe.Event) error {
-	var subscription stripe.Subscription
-	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
-		return fmt.Errorf("error parsing subscription: %w", err)
-	}
-	userID, err := uuid.Parse(subscription.Metadata["user_id"])
-	if err != nil {
-		return fmt.Errorf("invalid user_id in metadata: %w", err)
-	}
-
-	planID, err := uuid.Parse(subscription.Metadata["plan_id"])
-	if err != nil {
-		return fmt.Errorf("invalid plan_id in metadata: %w", err)
-	}
-
-	subscriptionReq := &dto.CreateSubscriptionRequest{
-		UserID:               userID,
-		PlanID:               planID,
-		StripeCustomerID:     subscription.Customer.ID,
-		StripeSubscriptionID: subscription.ID,
-		Status:               subscription.Status,
-		CurrentPeriodStart:   time.Unix(subscription.CurrentPeriodStart, 0),
-		CurrentPeriodEnd:     time.Unix(subscription.CurrentPeriodEnd, 0),
-		CancelAtPeriodEnd:    subscription.CancelAtPeriodEnd,
-	}
-
-	_, err = s.subscriptionRepo.CreateOrUpdate(ctx, subscriptionReq)
-	if err != nil {
-		return fmt.Errorf("error creating subscription: %w", err)
-	}
-
-	log.Printf("Subscription created: %s for user %s", subscription.ID, userID)
+	log.Printf("Pagamento %s registrado e assinatura %s atualizada", invoice.PaymentIntent.ID, stripeSubID)
 	return nil
 }
 
 func (s *StripeProvider) handleSubscriptionUpdated(ctx context.Context, event stripe.Event) error {
-	// Similar ao created, mas para updates
-	return s.handleSubscriptionCreated(ctx, event)
-}
-
-func (s *StripeProvider) handleSubscriptionDeleted(ctx context.Context, event stripe.Event) error {
-	var subscription stripe.Subscription
-	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
+	var stripeSub stripe.Subscription
+	if err := json.Unmarshal(event.Data.Raw, &stripeSub); err != nil {
 		return fmt.Errorf("error parsing subscription: %w", err)
 	}
 
-	input := db.UpdateSubscriptionStatusParams{
-		ID:     subscription.ID,
-		Status: "deleted",
-	}
-
-	err := s.subscriptionRepo.UpdateSubscriptionStatus(ctx, input)
+	subscription, err := s.subscriptionRepo.GetSubscriptionByStripeSbId(ctx, stripeSub.ID)
 	if err != nil {
-		return fmt.Errorf("error updating subscription status: %w", err)
+		return fmt.Errorf("assinatura com stripe_id %s não encontrada para atualização: %w", stripeSub.ID, err)
 	}
 
-	log.Printf("Subscription deleted: %s", subscription.ID)
+	newPriceID := stripeSub.Items.Data[0].Price.ID
+	newPlan, err := s.planRepo.FindByStripePriceID(ctx, newPriceID)
+	if err != nil {
+		return fmt.Errorf("novo plano com price_id %s não encontrado: %w", newPriceID, err)
+	}
+
+	// Atualizar o registro no banco
+	updateParams := db.UpdateSubscriptionPlanParams{
+		ID:                  subscription.ID,
+		PlanID:              newPlan.ID,
+		Status:              string(stripeSub.Status),
+		CurrentPeriodEndsAt: stripeSub.CurrentPeriodEnd,
+	}
+
+	err = s.subscriptionRepo.UpdatePlan(ctx, updateParams)
+	if err != nil {
+		return fmt.Errorf("erro ao atualizar plano da assinatura: %w", err)
+	}
+
+	log.Printf("Assinatura %s atualizada para o plano %s", stripeSub.ID, newPlan.Name)
+	return nil
+}
+
+func (s *StripeProvider) handleSubscriptionDeleted(ctx context.Context, event stripe.Event) error {
+	var stripeSub stripe.Subscription
+	if err := json.Unmarshal(event.Data.Raw, &stripeSub); err != nil {
+		return fmt.Errorf("error parsing subscription: %w", err)
+	}
+
+	err := s.subscriptionRepo.UpdateStatusByStripeID(ctx, stripeSub.ID, string(stripeSub.Status))
+	if err != nil {
+		return fmt.Errorf("erro ao atualizar status de cancelamento da assinatura %s: %w", stripeSub.ID, err)
+	}
+
+	log.Printf("Assinatura %s marcada como '%s' no banco de dados.", stripeSub.ID, stripeSub.Status)
 	return nil
 }

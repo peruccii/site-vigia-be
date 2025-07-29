@@ -45,9 +45,9 @@ func (s *planService) CreatePlan(ctx context.Context, input dto.CreatePlanReques
 
 	plan := db.CreatePlanParams{
 		Name:                  input.Name,
-		PriceMonthly:          input.PriceMonthly,
-		MaxWebsites:           int32(input.MaxWebsites),
-		CheckIntervalSeconds:  int32(input.CheckIntervalSeconds),
+		PriceMonthly:          int32(existingPlan.PriceMonthly),
+		MaxWebsites:           input.MaxWebsites,
+		CheckIntervalSeconds:  input.CheckIntervalSeconds,
 		HasPerformanceReports: input.HasPerformanceReports,
 		HasSeoAudits:          input.HasSEOAudits,
 		HasPublicStatusPage:   input.HasPublicStatusPage,

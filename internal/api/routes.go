@@ -19,17 +19,19 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 	userRepo := repository.NewUserRepository(queries)
 	authRepo := repository.NewAuthRepository(queries)
 	planRepo := repository.NewPlanRepository(queries)
+	paymentRepo := repository.NewPaymentRepository(queries)
 	subscriptionRepo := repository.NewSubscriptionRepository(queries)
 
 	authService := services.NewAuthService(authRepo, userRepo)
 	userService := services.NewUserService(userRepo)
 	planService := services.NewPlanService(planRepo)
-	subscriptionService := services.NewSubscriptionService(subscriptionRepo)
+	// subscriptionService := services.NewSubscriptionService(subscriptionRepo)
+	stripeService := services.NewStripeService(paymentRepo, *subscriptionRepo, *planRepo)
 
 	authController := controller.NewAuthController(authService)
 	userController := controller.NewUserController(userService)
 	planController := controller.NewPlanController(planService)
-	subscriptionController := controller.NewSubscriptionController(subscriptionService)
+	subscriptionController := controller.NewSubscriptionHandler(stripeService)
 
 	api := r.Group("/api")
 
@@ -60,7 +62,7 @@ func SetupRouter(database *sql.DB) *gin.Engine {
 
 		subscriptions := protected.Group("/subscriptions").Use(middleware.AuthMiddleware(authService))
 		{
-			subscriptions.POST("", subscriptionController.Create)
+			subscriptions.POST("", subscriptionController.CreateCheckout)
 		}
 	}
 

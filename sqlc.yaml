@@ -34,4 +34,21 @@ sql:
           - column: "*.stripe_subscription_id"
             go_type:
               type: "*string"    
-
+          - column: "*.stripe_session_id"
+            go_type:
+              type: "*string"
+          - column: "*.price_monthly"
+            go_type:
+              type: "int32"
+          - column: "*.check_interval_seconds"  
+            go_type:
+              type: "int"
+          - column: "*.max_websites"
+            go_type:
+              type: "int"
+          - column: "*.stripe_price_id"
+            go_type:
+              type: "*string"
+          - column: "*.current_period_ends_at"
+            go_type:
+              type: "time.Time"

@@ -27,7 +27,7 @@ type Payment struct {
 	SubscriptionID        uuid.UUID      `db:"subscription_id" json:"subscription_id"`
 	StripePaymentIntentID string         `db:"stripe_payment_intent_id" json:"stripe_payment_intent_id"`
 	StripeInvoiceID       sql.NullString `db:"stripe_invoice_id" json:"stripe_invoice_id"`
-	StripeSessionID       sql.NullString `db:"stripe_session_id" json:"stripe_session_id"`
+	StripeSessionID       *string        `db:"stripe_session_id" json:"stripe_session_id"`
 	AmountCents           int32          `db:"amount_cents" json:"amount_cents"`
 	Currency              string         `db:"currency" json:"currency"`
 	Status                string         `db:"status" json:"status"`
@@ -49,14 +49,15 @@ type PerformanceReport struct {
 }
 
 type Plan struct {
-	ID                    int32  `db:"id" json:"id"`
-	Name                  string `db:"name" json:"name"`
-	PriceMonthly          string `db:"price_monthly" json:"price_monthly"`
-	MaxWebsites           int32  `db:"max_websites" json:"max_websites"`
-	CheckIntervalSeconds  int32  `db:"check_interval_seconds" json:"check_interval_seconds"`
-	HasPerformanceReports bool   `db:"has_performance_reports" json:"has_performance_reports"`
-	HasSeoAudits          bool   `db:"has_seo_audits" json:"has_seo_audits"`
-	HasPublicStatusPage   bool   `db:"has_public_status_page" json:"has_public_status_page"`
+	ID                    int32   `db:"id" json:"id"`
+	Name                  string  `db:"name" json:"name"`
+	PriceMonthly          int32   `db:"price_monthly" json:"price_monthly"`
+	MaxWebsites           int     `db:"max_websites" json:"max_websites"`
+	CheckIntervalSeconds  int     `db:"check_interval_seconds" json:"check_interval_seconds"`
+	StripePriceID         *string `db:"stripe_price_id" json:"stripe_price_id"`
+	HasPerformanceReports bool    `db:"has_performance_reports" json:"has_performance_reports"`
+	HasSeoAudits          bool    `db:"has_seo_audits" json:"has_seo_audits"`
+	HasPublicStatusPage   bool    `db:"has_public_status_page" json:"has_public_status_page"`
 }
 
 type SeoAudit struct {
@@ -67,14 +68,14 @@ type SeoAudit struct {
 }
 
 type Subscription struct {
-	ID                   uuid.UUID  `db:"id" json:"id"`
-	UserID               uuid.UUID  `db:"user_id" json:"user_id"`
-	PlanID               int32      `db:"plan_id" json:"plan_id"`
-	Status               string     `db:"status" json:"status"`
-	StripeSubscriptionID *string    `db:"stripe_subscription_id" json:"stripe_subscription_id"`
-	CurrentPeriodEndsAt  *time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
-	CreatedAt            time.Time  `db:"created_at" json:"created_at"`
-	UpdatedAt            time.Time  `db:"updated_at" json:"updated_at"`
+	ID                   uuid.UUID `db:"id" json:"id"`
+	UserID               uuid.UUID `db:"user_id" json:"user_id"`
+	PlanID               int32     `db:"plan_id" json:"plan_id"`
+	Status               string    `db:"status" json:"status"`
+	StripeSubscriptionID *string   `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+	CurrentPeriodEndsAt  time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
+	CreatedAt            time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt            time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type UptimeCheck struct {
@@ -103,7 +104,7 @@ type Website struct {
 	Name                 string     `db:"name" json:"name"`
 	Url                  string     `db:"url" json:"url"`
 	IsActive             bool       `db:"is_active" json:"is_active"`
-	CheckIntervalSeconds int32      `db:"check_interval_seconds" json:"check_interval_seconds"`
+	CheckIntervalSeconds int        `db:"check_interval_seconds" json:"check_interval_seconds"`
 	LastCheckedAt        *time.Time `db:"last_checked_at" json:"last_checked_at"`
 	CreatedAt            time.Time  `db:"created_at" json:"created_at"`
 	UpdatedAt            time.Time  `db:"updated_at" json:"updated_at"`

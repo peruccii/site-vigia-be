@@ -23,7 +23,7 @@ type CreatePaymentParams struct {
 	SubscriptionID        uuid.UUID      `db:"subscription_id" json:"subscription_id"`
 	StripePaymentIntentID string         `db:"stripe_payment_intent_id" json:"stripe_payment_intent_id"`
 	StripeInvoiceID       sql.NullString `db:"stripe_invoice_id" json:"stripe_invoice_id"`
-	StripeSessionID       sql.NullString `db:"stripe_session_id" json:"stripe_session_id"`
+	StripeSessionID       *string        `db:"stripe_session_id" json:"stripe_session_id"`
 	AmountCents           int32          `db:"amount_cents" json:"amount_cents"`
 	Currency              string         `db:"currency" json:"currency"`
 	Status                string         `db:"status" json:"status"`
@@ -56,9 +56,9 @@ VALUES ($1, $2, $3, $4, $5, $6, $7)
 
 type CreatePlanParams struct {
 	Name                  string `db:"name" json:"name"`
-	PriceMonthly          string `db:"price_monthly" json:"price_monthly"`
-	MaxWebsites           int32  `db:"max_websites" json:"max_websites"`
-	CheckIntervalSeconds  int32  `db:"check_interval_seconds" json:"check_interval_seconds"`
+	PriceMonthly          int32  `db:"price_monthly" json:"price_monthly"`
+	MaxWebsites           int    `db:"max_websites" json:"max_websites"`
+	CheckIntervalSeconds  int    `db:"check_interval_seconds" json:"check_interval_seconds"`
 	HasPerformanceReports bool   `db:"has_performance_reports" json:"has_performance_reports"`
 	HasSeoAudits          bool   `db:"has_seo_audits" json:"has_seo_audits"`
 	HasPublicStatusPage   bool   `db:"has_public_status_page" json:"has_public_status_page"`
@@ -83,11 +83,11 @@ VALUES ($1 , $2, $3, $4, $5)
 `
 
 type CreateSubscriptionParams struct {
-	UserID               uuid.UUID  `db:"user_id" json:"user_id"`
-	PlanID               int32      `db:"plan_id" json:"plan_id"`
-	Status               string     `db:"status" json:"status"`
-	StripeSubscriptionID *string    `db:"stripe_subscription_id" json:"stripe_subscription_id"`
-	CurrentPeriodEndsAt  *time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
+	UserID               uuid.UUID `db:"user_id" json:"user_id"`
+	PlanID               int32     `db:"plan_id" json:"plan_id"`
+	Status               string    `db:"status" json:"status"`
+	StripeSubscriptionID *string   `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+	CurrentPeriodEndsAt  time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
 }
 
 func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error {
@@ -102,7 +102,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 }
 
 const getPlanByID = `-- name: GetPlanByID :one
-SELECT id, name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page FROM plans
+SELECT id, name, price_monthly, max_websites, check_interval_seconds, stripe_price_id, has_performance_reports, has_seo_audits, has_public_status_page FROM plans
 WHERE id = $1
 `
 
@@ -115,6 +115,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id int32) (Plan, error) {
 		&i.PriceMonthly,
 		&i.MaxWebsites,
 		&i.CheckIntervalSeconds,
+		&i.StripePriceID,
 		&i.HasPerformanceReports,
 		&i.HasSeoAudits,
 		&i.HasPublicStatusPage,
@@ -123,7 +124,7 @@ func (q *Queries) GetPlanByID(ctx context.Context, id int32) (Plan, error) {
 }
 
 const getPlanByName = `-- name: GetPlanByName :one
-SELECT id, name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page FROM plans 
+SELECT id, name, price_monthly, max_websites, check_interval_seconds, stripe_price_id, has_performance_reports, has_seo_audits, has_public_status_page FROM plans 
 WHERE name = $1
 `
 
@@ -136,6 +137,7 @@ func (q *Queries) GetPlanByName(ctx context.Context, name string) (Plan, error) 
 		&i.PriceMonthly,
 		&i.MaxWebsites,
 		&i.CheckIntervalSeconds,
+		&i.StripePriceID,
 		&i.HasPerformanceReports,
 		&i.HasSeoAudits,
 		&i.HasPublicStatusPage,
