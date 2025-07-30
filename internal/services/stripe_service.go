@@ -251,7 +251,7 @@ func (s *StripeProvider) handleCheckoutCompleted(ctx context.Context, event stri
 
 	err = s.subscriptionRepo.CreateSubscription(ctx, subParams)
 	if err != nil {
-		// Adicionar lógica para lidar com o caso de a assinatura já existir (idempotência)
+		// TODO:: Adicionar lógica para lidar com o caso de a assinatura já existir (idempotência)
 		return fmt.Errorf("erro ao criar registro de assinatura: %w", err)
 	}
 
@@ -260,24 +260,29 @@ func (s *StripeProvider) handleCheckoutCompleted(ctx context.Context, event stri
 }
 
 func (s *StripeProvider) handlePaymentSucceeded(ctx context.Context, event stripe.Event) error {
+	var subscription stripe.InvoiceParentSubscriptionDetails
+	if err := json.Unmarshal(event.Data.Raw, &subscription); err != nil {
+		return fmt.Errorf("erro ao fazer parse da subscription (invoice): %w", err)
+	}
+
 	var invoice stripe.Invoice
 	if err := json.Unmarshal(event.Data.Raw, &invoice); err != nil {
 		return fmt.Errorf("erro ao fazer parse da fatura (invoice): %w", err)
 	}
 
-	stripeSubID := invoice.Subscription.ID
+	stripeSubID := subscription.Subscription.ID
 	if stripeSubID == "" {
 		return nil
 	}
 
-	subscription, err := s.subscriptionRepo.GetSubscriptionByStripeSbId(ctx, stripeSubID)
+	sub, err := s.subscriptionRepo.GetSubscriptionByStripeSbId(ctx, stripeSubID)
 	if err != nil {
 		return fmt.Errorf("assinatura com stripe_id %s não encontrada no banco: %w", stripeSubID, err)
 	}
 
 	paymentParams := db.CreatePaymentParams{
-		UserID:                subscription.UserID,
-		SubscriptionID:        subscription.ID,
+		UserID:                sub.UserID,
+		SubscriptionID:        sub.ID,
 		StripePaymentIntentID: invoice.PaymentIntent.ID,
 		StripeInvoiceID:       &invoice.ID,
 		AmountCents:           int(invoice.AmountPaid), // Stripe retorna em centavos

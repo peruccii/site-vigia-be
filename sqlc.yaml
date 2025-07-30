@@ -52,3 +52,6 @@ sql:
           - column: "*.current_period_ends_at"
             go_type:
               type: "time.Time"
+          - column: "*.stripe_session_id"
+            go_type:
+              type: "*string"
