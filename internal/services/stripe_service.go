@@ -98,7 +98,7 @@ func (s *StripeProvider) CreateSubscriptionCheckout(ctx context.Context, req *Cr
 		return nil, fmt.Errorf("plano não encontrado: %w", err)
 	}
 
-	if plan.StripePriceID == nil || *plan.StripePriceID == "" {
+	if plan.StripePriceID == "" {
 		return nil, fmt.Errorf("plano %s não tem um Price ID do Stripe configurado", plan.Name)
 	}
 
@@ -126,7 +126,7 @@ func (s *StripeProvider) CreateSubscriptionCheckout(ctx context.Context, req *Cr
 
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
-				Price:    stripe.String(*plan.StripePriceID),
+				Price:    stripe.String(plan.StripePriceID),
 				Quantity: stripe.Int64(1),
 			},
 		},
@@ -245,7 +245,7 @@ func (s *StripeProvider) handleCheckoutCompleted(ctx context.Context, event stri
 		UserID:               userID,
 		PlanID:               int32(planID),
 		Status:               string(stripeSub.Status),
-		StripeSubscriptionID: &stripeSubID,
+		StripeSubscriptionID: stripeSubID,
 		CurrentPeriodEndsAt:  time.Unix(stripeSub.EndedAt, 0),
 	}
 
@@ -281,14 +281,13 @@ func (s *StripeProvider) handlePaymentSucceeded(ctx context.Context, event strip
 	}
 
 	paymentParams := db.CreatePaymentParams{
-		UserID:                sub.UserID,
-		SubscriptionID:        sub.ID,
-		StripePaymentIntentID: invoice.PaymentIntent.ID,
-		StripeInvoiceID:       &invoice.ID,
-		AmountCents:           int(invoice.AmountPaid), // Stripe retorna em centavos
-		Currency:              string(invoice.Currency),
-		Status:                string(PaymentSucceeded),
-		PaymentMethod:         string(invoice.PaymentSettings.PaymentMethodTypes[0]), // Simplificação
+		UserID:          sub.UserID,
+		SubscriptionID:  sub.ID,
+		StripeInvoiceID: &invoice.ID,
+		AmountCents:     int32(invoice.AmountPaid),
+		Currency:        string(invoice.Currency),
+		Status:          string(PaymentSucceeded),
+		PaymentMethod:   string(invoice.PaymentSettings.PaymentMethodTypes[0]),
 	}
 	// paidAt := time.Unix(invoice.StatusTransitions.PaidAt, 0)
 	// paymentParams.PaidAt = sql.NullTime{Time: paidAt, Valid: true}
@@ -304,16 +303,16 @@ func (s *StripeProvider) handlePaymentSucceeded(ctx context.Context, event strip
 	}
 
 	updateSubParams := db.UpdateSubscriptionPeriodParams{
-		ID:                  subscription.ID,
+		ID:                  sub.ID,
 		Status:              string(stripeSub.Status),
-		CurrentPeriodEndsAt: stripeSub.CurrentPeriodEnd,
+		CurrentPeriodEndsAt: time.Unix(stripeSub.CanceledAt, 0),
 	}
 	err = s.subscriptionRepo.UpdatePeriod(ctx, updateSubParams)
 	if err != nil {
 		return fmt.Errorf("erro ao atualizar período da assinatura: %w", err)
 	}
 
-	log.Printf("Pagamento %s registrado e assinatura %s atualizada", invoice.PaymentIntent.ID, stripeSubID)
+	log.Printf("Pagamento %s registrado e assinatura %s atualizada", stripeSubID)
 	return nil
 }
 
@@ -334,15 +333,14 @@ func (s *StripeProvider) handleSubscriptionUpdated(ctx context.Context, event st
 		return fmt.Errorf("novo plano com price_id %s não encontrado: %w", newPriceID, err)
 	}
 
-	// Atualizar o registro no banco
 	updateParams := db.UpdateSubscriptionPlanParams{
 		ID:                  subscription.ID,
 		PlanID:              newPlan.ID,
 		Status:              string(stripeSub.Status),
-		CurrentPeriodEndsAt: stripeSub.CurrentPeriodEnd,
+		CurrentPeriodEndsAt: time.Unix(stripeSub.CanceledAt, 0),
 	}
 
-	err = s.subscriptionRepo.UpdatePlan(ctx, updateParams)
+	err = s.subscriptionRepo.UpdateSubscriptionPlan(ctx, updateParams)
 	if err != nil {
 		return fmt.Errorf("erro ao atualizar plano da assinatura: %w", err)
 	}
@@ -357,7 +355,12 @@ func (s *StripeProvider) handleSubscriptionDeleted(ctx context.Context, event st
 		return fmt.Errorf("error parsing subscription: %w", err)
 	}
 
-	err := s.subscriptionRepo.UpdateStatusByStripeID(ctx, stripeSub.ID, string(stripeSub.Status))
+	updateStatusParams := db.UpdateStatusByStripeIDParams{
+		StripeSubscriptionID: stripeSub.ID,
+		Status:               string(stripeSub.Status),
+	}
+
+	err := s.subscriptionRepo.UpdateStatusByStripeID(ctx, updateStatusParams)
 	if err != nil {
 		return fmt.Errorf("erro ao atualizar status de cancelamento da assinatura %s: %w", stripeSub.ID, err)
 	}

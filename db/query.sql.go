@@ -12,6 +12,40 @@ import (
 	"github.com/google/uuid"
 )
 
+const createPayment = `-- name: CreatePayment :exec
+INSERT INTO payments (user_id, subscription_id, stripe_invoice_id, stripe_session_id, amount_cents, currency, status, payment_method, failure_reason, paid_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+`
+
+type CreatePaymentParams struct {
+	UserID          uuid.UUID  `db:"user_id" json:"user_id"`
+	SubscriptionID  uuid.UUID  `db:"subscription_id" json:"subscription_id"`
+	StripeInvoiceID *string    `db:"stripe_invoice_id" json:"stripe_invoice_id"`
+	StripeSessionID *string    `db:"stripe_session_id" json:"stripe_session_id"`
+	AmountCents     int32      `db:"amount_cents" json:"amount_cents"`
+	Currency        string     `db:"currency" json:"currency"`
+	Status          string     `db:"status" json:"status"`
+	PaymentMethod   string     `db:"payment_method" json:"payment_method"`
+	FailureReason   *string    `db:"failure_reason" json:"failure_reason"`
+	PaidAt          *time.Time `db:"paid_at" json:"paid_at"`
+}
+
+func (q *Queries) CreatePayment(ctx context.Context, arg CreatePaymentParams) error {
+	_, err := q.db.ExecContext(ctx, createPayment,
+		arg.UserID,
+		arg.SubscriptionID,
+		arg.StripeInvoiceID,
+		arg.StripeSessionID,
+		arg.AmountCents,
+		arg.Currency,
+		arg.Status,
+		arg.PaymentMethod,
+		arg.FailureReason,
+		arg.PaidAt,
+	)
+	return err
+}
+
 const createPlan = `-- name: CreatePlan :exec
 INSERT INTO plans (name, price_monthly, max_websites, check_interval_seconds, has_performance_reports, has_seo_audits, has_public_status_page )
 VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -49,7 +83,7 @@ type CreateSubscriptionParams struct {
 	UserID               uuid.UUID `db:"user_id" json:"user_id"`
 	PlanID               int32     `db:"plan_id" json:"plan_id"`
 	Status               string    `db:"status" json:"status"`
-	StripeSubscriptionID *string   `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+	StripeSubscriptionID string    `db:"stripe_subscription_id" json:"stripe_subscription_id"`
 	CurrentPeriodEndsAt  time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
 }
 
@@ -62,6 +96,50 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		arg.CurrentPeriodEndsAt,
 	)
 	return err
+}
+
+const findByStripePriceID = `-- name: FindByStripePriceID :one
+SELECT id, name, price_monthly, max_websites, check_interval_seconds, stripe_price_id, has_performance_reports, has_seo_audits, has_public_status_page FROM plans
+WHERE stripe_price_id = $1
+`
+
+func (q *Queries) FindByStripePriceID(ctx context.Context, stripePriceID string) (Plan, error) {
+	row := q.db.QueryRowContext(ctx, findByStripePriceID, stripePriceID)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceMonthly,
+		&i.MaxWebsites,
+		&i.CheckIntervalSeconds,
+		&i.StripePriceID,
+		&i.HasPerformanceReports,
+		&i.HasSeoAudits,
+		&i.HasPublicStatusPage,
+	)
+	return i, err
+}
+
+const getPlanByID = `-- name: GetPlanByID :one
+SELECT id, name, price_monthly, max_websites, check_interval_seconds, stripe_price_id, has_performance_reports, has_seo_audits, has_public_status_page FROM plans
+WHERE id = $1
+`
+
+func (q *Queries) GetPlanByID(ctx context.Context, id int32) (Plan, error) {
+	row := q.db.QueryRowContext(ctx, getPlanByID, id)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PriceMonthly,
+		&i.MaxWebsites,
+		&i.CheckIntervalSeconds,
+		&i.StripePriceID,
+		&i.HasPerformanceReports,
+		&i.HasSeoAudits,
+		&i.HasPublicStatusPage,
+	)
+	return i, err
 }
 
 const getPlanByName = `-- name: GetPlanByName :one
@@ -91,7 +169,7 @@ SELECT id, user_id, plan_id, status, stripe_subscription_id, current_period_ends
 WHERE stripe_subscription_id = $1
 `
 
-func (q *Queries) GetSubscriptionByStripeSbId(ctx context.Context, stripeSubscriptionID *string) (Subscription, error) {
+func (q *Queries) GetSubscriptionByStripeSbId(ctx context.Context, stripeSubscriptionID string) (Subscription, error) {
 	row := q.db.QueryRowContext(ctx, getSubscriptionByStripeSbId, stripeSubscriptionID)
 	var i Subscription
 	err := row.Scan(
@@ -207,5 +285,83 @@ type UpdatePasswordParams struct {
 
 func (q *Queries) UpdatePassword(ctx context.Context, arg UpdatePasswordParams) error {
 	_, err := q.db.ExecContext(ctx, updatePassword, arg.ID, arg.PasswordHash)
+	return err
+}
+
+const updateStatusByStripeID = `-- name: UpdateStatusByStripeID :exec
+UPDATE subscriptions
+SET status = $1
+WHERE stripe_subscription_id = $2
+`
+
+type UpdateStatusByStripeIDParams struct {
+	Status               string `db:"status" json:"status"`
+	StripeSubscriptionID string `db:"stripe_subscription_id" json:"stripe_subscription_id"`
+}
+
+func (q *Queries) UpdateStatusByStripeID(ctx context.Context, arg UpdateStatusByStripeIDParams) error {
+	_, err := q.db.ExecContext(ctx, updateStatusByStripeID, arg.Status, arg.StripeSubscriptionID)
+	return err
+}
+
+const updateSubscriptionPeriod = `-- name: UpdateSubscriptionPeriod :exec
+UPDATE subscriptions
+SET current_period_ends_at = $1,
+    status = $2
+WHERE id = $3
+`
+
+type UpdateSubscriptionPeriodParams struct {
+	CurrentPeriodEndsAt time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
+	Status              string    `db:"status" json:"status"`
+	ID                  uuid.UUID `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateSubscriptionPeriod(ctx context.Context, arg UpdateSubscriptionPeriodParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionPeriod, arg.CurrentPeriodEndsAt, arg.Status, arg.ID)
+	return err
+}
+
+const updateSubscriptionPlan = `-- name: UpdateSubscriptionPlan :exec
+UPDATE subscriptions
+SET id = $1,
+    plan_id = $2,
+    status = $3,
+    current_period_ends_at = $4
+WHERE id = $5
+`
+
+type UpdateSubscriptionPlanParams struct {
+	ID                  uuid.UUID `db:"id" json:"id"`
+	PlanID              int32     `db:"plan_id" json:"plan_id"`
+	Status              string    `db:"status" json:"status"`
+	CurrentPeriodEndsAt time.Time `db:"current_period_ends_at" json:"current_period_ends_at"`
+	ID_2                uuid.UUID `db:"id_2" json:"id_2"`
+}
+
+func (q *Queries) UpdateSubscriptionPlan(ctx context.Context, arg UpdateSubscriptionPlanParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionPlan,
+		arg.ID,
+		arg.PlanID,
+		arg.Status,
+		arg.CurrentPeriodEndsAt,
+		arg.ID_2,
+	)
+	return err
+}
+
+const updateSubscriptionStatus = `-- name: UpdateSubscriptionStatus :exec
+UPDATE subscriptions
+SET status = $1
+WHERE id = $2
+`
+
+type UpdateSubscriptionStatusParams struct {
+	Status string    `db:"status" json:"status"`
+	ID     uuid.UUID `db:"id" json:"id"`
+}
+
+func (q *Queries) UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionStatus, arg.Status, arg.ID)
 	return err
 }

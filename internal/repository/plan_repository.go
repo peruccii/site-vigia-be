@@ -27,3 +27,7 @@ func (r *PlanRepository) GetPlanByName(ctx context.Context, name string) (db.Pla
 func (r *PlanRepository) GetPlanByID(ctx context.Context, id int32) (db.Plan, error) {
 	return r.queries.GetPlanByID(ctx, id)
 }
+
+func (r *PlanRepository) FindByStripePriceID(ctx context.Context, priceID string) (db.Plan, error) {
+	return r.queries.FindByStripePriceID(ctx, priceID)
+}

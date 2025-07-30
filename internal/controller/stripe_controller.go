@@ -2,6 +2,7 @@ package controller
 
 import (
 	"net/http"
+	"strconv"
 
 	"peruccii/site-vigia-be/internal/services"
 
@@ -35,7 +36,7 @@ func (h *SubscriptionHandler) CreateCheckout(c *gin.Context) {
 	userName := c.MustGet("user_name").(string)
 	userEmail := c.MustGet("user_email").(string)
 
-	planID, err := uuid.Parse(req.PlanID)
+	planID, err := strconv.Atoi(req.PlanID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid plan_id"})
 		return
@@ -43,7 +44,7 @@ func (h *SubscriptionHandler) CreateCheckout(c *gin.Context) {
 
 	checkoutReq := &services.CreateSubscriptionRequest{
 		UserID:     userID,
-		PlanID:     planID,
+		PlanID:     int32(planID),
 		UserName:   userName,
 		UserEmail:  userEmail,
 		SuccessURL: "https://app.sentinelsimples.com/success",

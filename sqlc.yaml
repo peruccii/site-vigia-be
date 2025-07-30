@@ -33,8 +33,11 @@ sql:
               type: "*time.Time"
           - column: "*.stripe_subscription_id"
             go_type:
-              type: "*string"    
+              type: "string"    
           - column: "*.stripe_session_id"
+            go_type:
+              type: "*string"
+          - column: "*.stripe_invoice_id"
             go_type:
               type: "*string"
           - column: "*.price_monthly"
@@ -48,10 +51,13 @@ sql:
               type: "int"
           - column: "*.stripe_price_id"
             go_type:
-              type: "*string"
+              type: "string"
           - column: "*.current_period_ends_at"
             go_type:
               type: "time.Time"
           - column: "*.stripe_session_id"
             go_type:
               type: "*string"
+          - column: "*.stripe_price_id"
+            go_type:
+              type: "string"
