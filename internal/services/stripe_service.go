@@ -312,7 +312,7 @@ func (s *StripeProvider) handlePaymentSucceeded(ctx context.Context, event strip
 		return fmt.Errorf("erro ao atualizar período da assinatura: %w", err)
 	}
 
-	log.Printf("Pagamento %s registrado e assinatura %s atualizada", stripeSubID)
+	log.Printf("Pagamento registrado e assinatura %s atualizada", stripeSubID)
 	return nil
 }
 
