@@ -1,45 +1,49 @@
 version: "3.8"
 
 services:
-  backend:
-    build: .
-    container_name: sitevigia_backend
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    environment:
-      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - sitevigia_network
-    restart: unless-stopped
+    backend:
+        build: .
+        container_name: sitevigia_backend
+        ports:
+            - "3333:3333"
+        env_file:
+            - .env
+        environment:
+            - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
+        depends_on:
+            db:
+                condition: service_healthy
+        networks:
+            - sitevigia_network
+        restart: unless-stopped
 
-  db:
-    image: postgres:16-alpine
-    container_name: sitevigia_db
-    env_file:
-      - .env
-    environment:
-      - POSTGRES_HOST_AUTH_METHOD=trust
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - sitevigia_network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+    db:
+        image: postgres:16-alpine
+        container_name: sitevigia_db
+        env_file:
+            - .env
+        environment:
+            - POSTGRES_HOST_AUTH_METHOD=trust
+        ports:
+            - "5433:5433"
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        networks:
+            - sitevigia_network
+        restart: unless-stopped
+        healthcheck:
+            test:
+                [
+                    "CMD-SHELL",
+                    "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
 
 volumes:
-  postgres_data:
+    postgres_data:
 
 networks:
-  sitevigia_network:
-    driver: bridge
+    sitevigia_network:
+        driver: bridge

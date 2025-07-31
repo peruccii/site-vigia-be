@@ -54,7 +54,7 @@ func (s *planService) CreatePlan(ctx context.Context, input dto.CreatePlanReques
 	}
 
 	if err := s.repo.CreatePlan(ctx, plan); err != nil {
-		return err
+		return errors.New("failed")
 	}
 
 	return nil

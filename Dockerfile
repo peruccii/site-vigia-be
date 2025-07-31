@@ -39,7 +39,7 @@ COPY --from=builder /app/migrations ./migrations
 
 # Expõe a porta 8080 para que o Docker saiba que nosso app
 # escuta nesta porta.
-EXPOSE 8080
+EXPOSE 3333
 
 # Comando para executar quando o contêiner iniciar.
 # Executa nosso binário compilado.
